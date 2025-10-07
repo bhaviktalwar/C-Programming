@@ -1,0 +1,190 @@
+// Code Using Dynamic Memory Allocation (Heap Memory)
+#include "splashkit.h"
+using std::to_string;
+using std::stoi;
+const int SCREEN_WIDTH = 800;
+const int SCREEN_HEIGHT = 600;
+const int PADDLE_WIDTH = 20;  
+const int PADDLE_HEIGHT = 150;  
+const int BALL_SIZE = 20;  
+const int PADDLE_SPEED = 5;
+const int BALL_SPEED = 4;  
+
+struct Paddle
+{
+    double x, y;
+};
+
+struct Ball
+{
+    double x, y;
+    double dx, dy;
+};
+
+void draw_paddle(const Paddle &paddle)
+{
+    if (paddle.x < SCREEN_WIDTH / 2) 
+    {
+        fill_rectangle(COLOR_RED, paddle.x, paddle.y, PADDLE_WIDTH, PADDLE_HEIGHT);
+    }
+    else  
+    {
+        fill_rectangle(COLOR_BLUE, paddle.x, paddle.y, PADDLE_WIDTH, PADDLE_HEIGHT);
+    }
+}
+
+void draw_ball(const Ball &ball)
+{
+    fill_ellipse(COLOR_BLACK, ball.x, ball.y, BALL_SIZE, BALL_SIZE);
+}
+
+void draw_score(const int* score, int num_players)
+{
+    for (int i = 0; i < num_players; i++)  
+    {
+        string player_score;
+        if (i == 0)
+        {
+            player_score = "Left Player: " + to_string(score[i]);
+            draw_text(player_score, COLOR_BLACK, 20, 20);  
+        }
+        else
+        {
+            player_score = "Right Player: " + to_string(score[i]);
+            draw_text(player_score, COLOR_BLACK, SCREEN_WIDTH - 200, 20);  
+        }
+    }
+}
+
+void draw_player_names(const string* player_names)
+{
+    draw_text("Left Player: " + player_names[0], COLOR_BLACK, 20, 50);
+    draw_text("Right Player: " + player_names[1], COLOR_BLACK, SCREEN_WIDTH - 200, 50);
+}
+
+void draw_winner(const int* score, const string* player_names, int num_players, int winning_score)
+{
+    string winner_text;
+    
+    for (int i = 0; i < num_players; i++)
+    {
+        if (score[i] >= winning_score)
+        {
+            winner_text = player_names[i] + " Wins!";
+            write_line(player_names[i] + " Wins!");
+            break;
+        }
+    }
+
+    draw_text(winner_text, COLOR_RED, 400 , 300);
+    delay(2000);
+}
+
+void update_paddle(Paddle &paddle, bool move_up, bool move_down)
+{
+    if (move_up && paddle.y > 0)
+    {
+        paddle.y -= PADDLE_SPEED;
+    }
+    if (move_down && paddle.y < SCREEN_HEIGHT - PADDLE_HEIGHT)
+    {
+        paddle.y += PADDLE_SPEED;
+    }
+}
+
+void update_ball(Ball &ball, Paddle &left_paddle, Paddle &right_paddle, int* score)
+{
+    ball.x += ball.dx;
+    ball.y += ball.dy;
+
+    if (ball.y <= 0 || ball.y >= SCREEN_HEIGHT - BALL_SIZE)
+    {
+        ball.dy = -ball.dy;
+    }
+
+    if (ball.x <= left_paddle.x + PADDLE_WIDTH && ball.y >= left_paddle.y && ball.y <= left_paddle.y + PADDLE_HEIGHT)
+    {
+        ball.dx = BALL_SPEED;
+    }
+    if (ball.x >= right_paddle.x - BALL_SIZE && ball.y >= right_paddle.y && ball.y <= right_paddle.y + PADDLE_HEIGHT)
+    {
+        ball.dx = -BALL_SPEED;
+    }
+
+    if (ball.x <= 0 && ball.dx < 0) 
+    {
+        score[1]++;
+        ball.x = SCREEN_WIDTH / 2;
+        ball.y = SCREEN_HEIGHT / 2;
+        ball.dx = BALL_SPEED;
+        ball.dy = BALL_SPEED;
+    }
+    else if (ball.x >= SCREEN_WIDTH - BALL_SIZE && ball.dx > 0)
+    {
+        score[0]++;
+        ball.x = SCREEN_WIDTH / 2;
+        ball.y = SCREEN_HEIGHT / 2;
+        ball.dx = -BALL_SPEED;
+        ball.dy = BALL_SPEED;
+    }
+}
+
+int main()
+{ 
+    string player_names[2];  
+    int num_players = 2;
+
+    write_line("Enter the name of the Left Player: ");
+    player_names[0] = read_line();  
+    write_line("Enter the name of the Right Player: ");
+    player_names[1] = read_line();  
+
+    int winning_score;
+    write_line("Enter the number of points required to win the game: ");
+    winning_score = stoi(read_line());  // Dynamic Array : User input for winning score
+
+    open_window("Bhavik's Pong", SCREEN_WIDTH, SCREEN_HEIGHT);
+
+    Paddle left_paddle = {50, SCREEN_HEIGHT / 2 - PADDLE_HEIGHT / 2};
+    Paddle right_paddle = {SCREEN_WIDTH - 50 - PADDLE_WIDTH, SCREEN_HEIGHT / 2 - PADDLE_HEIGHT / 2};
+    Ball ball = {SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, BALL_SPEED, BALL_SPEED};
+    
+    // Use dynamic memory allocation for score array
+    int* score = new int[num_players] {0};  
+
+    while (score[0] < winning_score && score[1] < winning_score)
+    {
+        process_events();
+
+        bool left_paddle_up = key_down(W_KEY);
+        bool left_paddle_down = key_down(S_KEY);
+        bool right_paddle_up = key_down(UP_KEY);
+        bool right_paddle_down = key_down(DOWN_KEY);
+
+        update_paddle(left_paddle, left_paddle_up, left_paddle_down);
+        update_paddle(right_paddle, right_paddle_up, right_paddle_down);
+
+        update_ball(ball, left_paddle, right_paddle, score);
+
+        clear_screen(COLOR_SKY_BLUE);
+
+        draw_paddle(left_paddle);
+        draw_paddle(right_paddle);
+        draw_ball(ball);
+        draw_score(score, num_players);
+        draw_player_names(player_names);
+
+        if (score[0] >= winning_score || score[1] >= winning_score)
+        {
+            draw_winner(score, player_names, num_players, winning_score);
+        }
+
+        refresh_screen(60);
+    }
+
+    // Free dynamically allocated memory with the help of delete[] function
+    delete[] score;
+
+    return 0;
+}
+
